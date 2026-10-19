@@ -1,6 +1,6 @@
 // ─── Comunicación con las APIs de OpenMeteo ─────────────────────────
 
-import type { Ciudad, ResultadoGeocoding, RespuestaForecast } from "./types";
+import type { Ciudad, ResultadoGeocoding, RespuestaForecast, RespuestaForecastExtendido, PronosticoDiario } from "./types";
 
 const GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
@@ -70,4 +70,43 @@ export async function obtenerTemperatura(
   }
 
   return temp;
+}
+
+/**
+ * Obtiene el pronóstico del clima para los próximos 7 días.
+ * Retorna un arreglo con la fecha, temperatura máxima, mínima y código de clima.
+ */
+export async function obtenerPronostico7Dias(
+  lat: number,
+  lon: number,
+): Promise<PronosticoDiario[]> {
+  const url = `${FORECAST_URL}?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&forecast_days=7`;
+
+  const res = await fetchConReintento(url);
+  if (!res.ok) {
+    throw new Error(`Error en forecast extendido: ${res.status}`);
+  }
+
+  const data = (await res.json()) as RespuestaForecastExtendido;
+  const daily = data.daily;
+
+  if (!daily || !daily.time || daily.time.length === 0) {
+    throw new Error("No se encontraron datos de pronóstico en la respuesta");
+  }
+
+  const pronostico: PronosticoDiario[] = [];
+  for (let i = 0; i < daily.time.length; i++) {
+    const fecha = daily.time[i];
+    const tempMax = daily.temperature_2m_max[i];
+    const tempMin = daily.temperature_2m_min[i];
+    const codigoClima = daily.weathercode[i];
+
+    if (fecha === undefined || tempMax === undefined || tempMin === undefined || codigoClima === undefined) {
+      throw new Error("Datos incompletos en la respuesta del pronóstico");
+    }
+
+    pronostico.push({ fecha, tempMax, tempMin, codigoClima });
+  }
+
+  return pronostico;
 }

@@ -5,7 +5,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 import { createInterface } from "node:readline";
 import { cargarDatos, agregarCiudad, eliminarCiudad, guardarDatos } from "./storage";
-import { buscarCiudad, obtenerTemperatura } from "./weather";
+import { buscarCiudad, obtenerTemperatura, obtenerPronostico7Dias } from "./weather";
 import type { Almacenamiento, Ciudad } from "./types";
 
 // ─── Utilidades de UI ───────────────────────────────────────────────
@@ -45,6 +45,7 @@ function mostrarMenu(datos: Almacenamiento): void {
   console.log(cyan("  3. Buscar y agregar ciudad"));
   console.log(cyan("  4. Eliminar ciudad"));
   console.log(cyan("  5. Establecer ciudad default"));
+  console.log(cyan("  7. Pronóstico 7 días (ciudad default)"));
   console.log(cyan(`  8. Ajustes (°${datos.config.unidad})`));
   console.log(cyan("  9. Salir"));
   console.log(cyan(linea()));
@@ -230,6 +231,57 @@ async function opcionAjustes(datos: Almacenamiento): Promise<void> {
   console.log(amarillo(`  ✅ Unidad cambiada a °${datos.config.unidad}.`));
 }
 
+function describirClima(codigo: number): string {
+  if (codigo === 0) return "☀️  Despejado";
+  if (codigo === 1) return "🌤️  Mayormente despejado";
+  if (codigo === 2) return "⛅ Parcialmente nublado";
+  if (codigo === 3) return "☁️  Nublado";
+  if (codigo >= 45 && codigo <= 48) return "🌫️  Niebla";
+  if (codigo >= 51 && codigo <= 55) return "🌦️  Llovizna";
+  if (codigo >= 56 && codigo <= 57) return "🌧️  Llovizna helada";
+  if (codigo >= 61 && codigo <= 65) return "🌧️  Lluvia";
+  if (codigo >= 66 && codigo <= 67) return "🌧️  Lluvia helada";
+  if (codigo >= 71 && codigo <= 75) return "❄️  Nieve";
+  if (codigo === 77) return "❄️  Granos de nieve";
+  if (codigo >= 80 && codigo <= 82) return "🌦️  Chubascos";
+  if (codigo >= 85 && codigo <= 86) return "🌨️  Chubascos de nieve";
+  if (codigo === 95) return "⛈️  Tormenta";
+  if (codigo >= 96 && codigo <= 99) return "⛈️  Tormenta con granizo";
+  return "❓ Desconocido";
+}
+
+async function opcionPronostico7Dias(datos: Almacenamiento): Promise<void> {
+  const nombre = datos.config.ciudadDefault;
+  if (!nombre) {
+    console.log("  ⚠️  No hay ciudad default establecida.");
+    console.log("     Usa la opción 3 para agregar una ciudad.");
+    return;
+  }
+
+  const ciudad = datos.ciudades.find(
+    (c) => c.nombre.toLowerCase() === nombre.toLowerCase(),
+  );
+  if (!ciudad) {
+    console.log("  ⚠️  La ciudad default ya no existe en tu lista.");
+    return;
+  }
+
+  try {
+    const pronostico = await obtenerPronostico7Dias(ciudad.lat, ciudad.lon);
+    console.log(amarillo(`  Pronóstico para ${ciudad.nombre} — próximos 7 días:`));
+    console.log();
+    console.log(`  ${"Fecha".padEnd(12)} ${"Mín".padStart(6)} ${"Máx".padStart(6)}  Clima`);
+    console.log(`  ${"─".repeat(12)} ${"─".repeat(6)} ${"─".repeat(6)}  ${"─".repeat(20)}`);
+    for (const dia of pronostico) {
+      const tempMin = convertirTemp(dia.tempMin, datos.config.unidad).toFixed(1);
+      const tempMax = convertirTemp(dia.tempMax, datos.config.unidad).toFixed(1);
+      console.log(`  ${dia.fecha.padEnd(12)} ${tempMin.padStart(5)}°${datos.config.unidad} ${tempMax.padStart(5)}°${datos.config.unidad}  ${describirClima(dia.codigoClima)}`);
+    }
+  } catch (error) {
+    console.error(rojo(`  ❌ Error al obtener el pronóstico: ${error instanceof Error ? error.message : error}`));
+  }
+}
+
 // ─── Loop principal ────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -255,6 +307,9 @@ async function main(): Promise<void> {
         break;
       case "5":
         await opcionEstablecerDefault(datos);
+        break;
+      case "7":
+        await opcionPronostico7Dias(datos);
         break;
       case "8":
         await opcionAjustes(datos);
