@@ -1,0 +1,28 @@
+{
+  "ciudades": [
+    {
+      "nombre": "Puebla de Zaragoza",
+      "lat": 19.04778,
+      "lon": -98.20723
+    },
+    {
+      "nombre": "Juárez Coronaco",
+      "lat": 19.36056,
+      "lon": -98.525
+    },
+    {
+      "nombre": "Nayarit",
+      "lat": 15.89139,
+      "lon": -92.94889
+    },
+    {
+      "nombre": "Querétaro",
+      "lat": 15.83752,
+      "lon": -92.75774
+    }
+  ],
+  "config": {
+    "ciudadDefault": "Puebla de Zaragoza",
+    "unidad": "F"
+  }
+}

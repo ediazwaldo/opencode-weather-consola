@@ -1,0 +1,5 @@
+[tls]
+# Usar los certificados del sistema operativo en lugar de los incluidos con Bun
+# Necesario en Windows cuando hay proxies/firewalls que interceptan tráfico HTTPS
+certificates = "system"
+strict = false
