@@ -3,6 +3,7 @@
   "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "version": "1.0.0",
   "scripts": {
     "typecheck": "bun check",
     "test": "bun test tests/",
